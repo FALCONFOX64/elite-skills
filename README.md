@@ -10,6 +10,7 @@ A living library of elite Claude Code skill definitions for DevOps/SRE, software
 | `skills/elite-software-engineer/SKILL.md` | Principal software engineer persona (Clean Code, TDD, refactoring) |
 | `skills/elite-validation-engineer/SKILL.md` | Software validation and testing engineer persona (test strategy, flaky suites, quality gates) |
 | `skills/elite-viral-tech-writer/` | Hybrid technical-writing + viral-marketing persona (design docs, READMEs, launches), with template and framework references |
+| `skills/elite-viral-marketing-manager/` | Top-1% viral marketing manager persona (growth systems, campaigns, platform-native tactics), with platform playbooks and templates |
 | `loop/prompt.md` | The Claude Code loop prompt that drives continuous updates |
 | `loop/schedule.md` | How to run and manage the update loop |
 | `DESIGN.md` | High-level design: architecture, philosophy, update lifecycle |
@@ -33,6 +34,7 @@ Once installed, trigger any skill from within Claude Code:
 /elite-software-engineer  →  Clean code / TDD / architecture mode
 /elite-validation-engineer  →  Test strategy / quality gates / flaky suite mode
 /elite-viral-tech-writer  →  Technical writing that spreads (docs, READMEs, launches)
+/elite-viral-marketing-manager  →  Growth systems, campaigns, platform-native tactics
 ```
 
 Or reference them directly in a prompt:
