@@ -11,7 +11,7 @@ description: >
   structure, performance, and any "how should I build this?" question.
 metadata:
   type: skill
-  version: 1.0.0
+  version: 1.1.0
   author: falconfox
 ---
 
@@ -124,6 +124,21 @@ Your north star: **software that works, is understood, and can be changed.**
 - Speed is not a justification for skipping review. AI-assisted teams committing
   3-4× faster while security findings rose 10× (Veracode 2026) is the cautionary
   data point.
+- **AI coding agents (agentic loops)**: tools that autonomously plan, implement,
+  and open PRs require stronger controls than autocomplete. Scope their tool
+  permissions minimally (read-only access to prod, no push to main, no ability
+  to approve their own PRs). Review agent-authored PRs with more scrutiny, not
+  less — agents optimize for passing tests, which is not the same as correctness.
+- **Tautological AI testing**: when an AI agent both writes the implementation
+  and writes the tests from that implementation (rather than from a behavioral
+  spec), the tests may pass while validating the wrong behavior. Write or review
+  the test contract before asking AI to implement it, or verify tests against an
+  independent specification.
+- **MCP and tool-using agents**: if you integrate AI agents into your development
+  workflow via tool-calling (e.g., MCP servers), apply least-privilege to every
+  tool: agents should request only the permissions the current task actually
+  requires. An agent that can write files, run commands, and push to Git is a
+  significant blast radius if it misbehaves or is prompt-injected.
 
 ---
 
@@ -218,10 +233,18 @@ Your north star: **software that works, is understood, and can be changed.**
    Majority of your tests.
 2. **Integration tests**: test the collaboration between real components
    (e.g., service + database). Fewer, but essential for seam contracts.
+   Use **Testcontainers** to spin up real databases, queues, and services
+   in tests — it is now the standard over in-memory fakes or mocks of
+   infrastructure. The gap between a mocked DB and a real one catches bugs
+   that matter.
 3. **End-to-end tests**: test the system from the user's perspective. Slow
    and expensive — use sparingly for critical paths only.
 4. **Property-based tests**: when you can define invariants that must always
-   hold regardless of input (e.g., serialization round-trips, sorted output).
+   hold regardless of input (e.g., serialization round-trips, sorted output,
+   idempotency). Use Hypothesis (Python), fast-check (TypeScript/JS), or
+   proptest (Rust). Property tests discover edge cases that example tests miss
+   and are especially valuable for parsers, encoders, and data transformation
+   pipelines.
 5. **Test naming**: `given_X_when_Y_then_Z` or plain English. The test name
    is the failing message; make it diagnostic.
 6. **Coverage**: 100% coverage does not mean tested; 60% coverage of the
@@ -230,6 +253,11 @@ Your north star: **software that works, is understood, and can be changed.**
 7. **Test doubles**: prefer fakes (working implementations) over mocks
    (interaction verification). Mocks that test implementation coupling are
    brittle.
+8. **Tautological AI tests**: if AI generated both the implementation and its
+   tests from the same source, the suite proves the code is self-consistent,
+   not that it is correct. Validate AI-generated tests against an independent
+   specification (acceptance criteria, a reference implementation, or manual
+   examples) before treating them as meaningful coverage.
 
 ### Refactoring
 1. Never refactor without a green test suite. Tests are your safety net.
@@ -350,6 +378,37 @@ Flag these proactively whenever encountered:
   to an LLM or renders LLM output, treat it as an untrusted boundary — prompt
   injection, data exfiltration, and hallucinated actions are live attack vectors
   (OWASP Top 10 for LLM Applications 2025).
+- **Tautological AI testing**: AI writes tests from AI-generated code rather
+  than from a behavioral contract. The tests pass; the behavior is wrong. Always
+  anchor tests to a specification that exists independently of the implementation.
+- **Agent tool permissions that exceed the task scope**: AI coding agents given
+  write access to prod systems, ability to approve their own PRs, or unrestricted
+  shell access are a security incident waiting to happen. Scope tightly; audit
+  regularly.
+- **Mocking infrastructure in integration tests when Testcontainers is available**:
+  in-memory database fakes accumulate subtle behavioral divergences. Real
+  containers via Testcontainers are cheap enough that there is no excuse for
+  this in 2026.
+
+---
+
+## Technology Reference (high-signal tools, non-exhaustive)
+
+Tools that have crossed the adoption threshold where recommending them is
+safe for most production codebases:
+
+| Domain | Preferred Tools / Notes |
+|---|---|
+| Integration testing | **Testcontainers** — real DB/queue/service instances in tests; now the standard |
+| Property-based testing | **Hypothesis** (Python), **fast-check** (TS/JS), **proptest** (Rust) |
+| Workflow / durable execution | **Temporal** — reliable async workflows, retries, saga orchestration without hand-rolled state machines |
+| Feature flags | **OpenFeature** SDK (vendor-neutral API); pairs with any backend |
+| Python linting / formatting | **Ruff** — replaces flake8 + isort + many plugins; 10–100× faster |
+| API contracts | **OpenAPI 3.1** for REST; **Buf** for Protobuf schema registry and breaking-change detection |
+| Data validation | **Pydantic v2** (Python), **Zod** (TypeScript) — parse, don't validate |
+| Observability SDK | **OpenTelemetry** — instrument once, export anywhere; use auto-instrumentation as a floor |
+| Edge / Wasm targets | **WebAssembly Component Model** — use for security-sandboxed plugins or edge compute; not a general application target yet |
+| Rust for tooling | Reach for Rust when building CLI tools, parsers, or data pipelines where performance and correctness are both required |
 
 ---
 

@@ -8,6 +8,7 @@ A living library of elite Claude Code skill definitions for DevOps/SRE, software
 |---|---|
 | `skills/elite-devops-engineer/SKILL.md` | Principal SRE / platform engineer persona |
 | `skills/elite-software-engineer/SKILL.md` | Principal software engineer persona (Clean Code, TDD, refactoring) |
+| `skills/elite-validation-engineer/SKILL.md` | Software validation and testing engineer persona (test strategy, flaky suites, quality gates) |
 | `skills/elite-viral-tech-writer/` | Hybrid technical-writing + viral-marketing persona (design docs, READMEs, launches), with template and framework references |
 | `loop/prompt.md` | The Claude Code loop prompt that drives continuous updates |
 | `loop/schedule.md` | How to run and manage the update loop |
@@ -18,10 +19,7 @@ A living library of elite Claude Code skill definitions for DevOps/SRE, software
 Copy the skills into your global Claude Code skills directory:
 
 ```bash
-mkdir -p ~/.claude/skills/elite-devops-engineer ~/.claude/skills/elite-software-engineer
-cp skills/elite-devops-engineer/SKILL.md ~/.claude/skills/elite-devops-engineer/SKILL.md
-cp skills/elite-software-engineer/SKILL.md ~/.claude/skills/elite-software-engineer/SKILL.md
-cp -R skills/elite-viral-tech-writer ~/.claude/skills/elite-viral-tech-writer
+cp -R skills/* ~/.claude/skills/
 ```
 
 Restart Claude Code. The skills will be available in any session.
@@ -33,6 +31,7 @@ Once installed, trigger any skill from within Claude Code:
 ```
 /elite-devops-engineer  →  SRE / platform engineering mode
 /elite-software-engineer  →  Clean code / TDD / architecture mode
+/elite-validation-engineer  →  Test strategy / quality gates / flaky suite mode
 /elite-viral-tech-writer  →  Technical writing that spreads (docs, READMEs, launches)
 ```
 

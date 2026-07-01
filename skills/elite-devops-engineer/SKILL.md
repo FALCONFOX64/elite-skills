@@ -10,7 +10,7 @@ description: >
   security hardening, cost optimization, and production readiness reviews.
 metadata:
   type: skill
-  version: 1.0.0
+  version: 1.1.0
   author: falconfox
 ---
 
@@ -138,7 +138,18 @@ Before approving or proposing any design, verify:
 7. **AI in CI**: AI-assisted pipeline diagnostics (e.g., root-cause summaries
    on failed builds) are high-value and low-risk. AI-generated config changes
    auto-merged without review are high-risk — require human gate regardless of
-   AI confidence score.
+   AI confidence score. AI coding agents (agentic loops that open PRs) must
+   be subject to the same review process as human contributors: no auto-merge
+   path, no bypassing required checks.
+8. **Portable pipelines**: consider Dagger for pipeline logic that needs to
+   run identically locally and in CI. Vendor-specific YAML is difficult to
+   test offline; Dagger pipelines are containerized and portable.
+9. **Supply chain — SLSA levels**: target SLSA Level 2 as a minimum (source
+   version controlled + hosted CI build + provenance generated). Level 3
+   (hardened CI, signed provenance) for artifacts published externally or
+   consumed by enterprise customers. Use `slsa-github-generator` for GitHub
+   Actions. SBOM generation (Syft) and signing (cosign) required for all
+   published images.
 
 ### Internal Developer Platform (IDP)
 Platform engineering is the 2026 model for scaling DevOps. Build a thin
@@ -181,6 +192,17 @@ deployment, observability, and secrets — without exposing raw Kubernetes.
    immutable digests (prefer digests in prod).
 9. Secrets via External Secrets Operator syncing from Vault / cloud secret
    manager; never Kubernetes Secrets committed to Git.
+10. **Networking layer**: Cilium is now the preferred CNI for new clusters —
+    eBPF-based, replaces kube-proxy, native network policy enforcement, and
+    pairs with Tetragon for kernel-level security observability without
+    intrusive sidecars.
+11. **Ingress → Gateway API**: Kubernetes Gateway API (v1 GA) is the
+    production standard. New clusters and services should use Gateway API
+    resources (Gateway, HTTPRoute, GRPCRoute). Ingress is legacy.
+12. **Service mesh — ambient mode**: if adopting Istio, target ambient mode
+    (no per-pod sidecars; uses ztunnel + waypoint proxies). Sidecar-based
+    Istio is the legacy path; do not start new deployments on it. Linkerd
+    sidecar model remains valid for teams that prefer its simplicity.
 
 ### Observability Stack
 1. **Metrics**: Prometheus + Thanos (or Mimir) for long-term storage;
@@ -288,20 +310,25 @@ get direct answers, not boilerplate.
 
 | Domain | Preferred Tools |
 |---|---|
-| IaC | Terraform, Pulumi, CDK |
+| IaC | Terraform, Pulumi, CDK; **Crossplane** for Kubernetes-native cloud provisioning |
 | Containers/Orchestration | Kubernetes, Helm, Kustomize |
 | GitOps | Argo CD, Flux |
-| CI/CD | GitHub Actions, Argo Workflows, Tekton, GitLab CI |
-| Observability | Prometheus, Grafana, Loki, Tempo, OpenTelemetry |
-| Service Mesh | Istio, Linkerd |
+| CI/CD | GitHub Actions, Argo Workflows, Tekton, GitLab CI; **Dagger** for portable pipeline logic |
+| Networking / CNI | **Cilium** (eBPF, replaces kube-proxy); Calico for legacy clusters |
+| Ingress / Traffic | **Kubernetes Gateway API** (production standard); Ingress is legacy |
+| Service Mesh | **Istio ambient mode** (preferred for new deployments); Linkerd (sidecar, simpler ops) |
+| Observability | Prometheus, Grafana, Loki, Tempo, **OpenTelemetry** (now the de facto standard); **SigNoz** / ClickHouse-backed for cost-effective full-stack telemetry |
+| eBPF Security | **Tetragon** (runtime security observability at kernel level); Falco (userspace, more mature rule ecosystem) |
 | Secret Management | HashiCorp Vault, AWS Secrets Manager, GCP Secret Manager |
-| Policy / Security | OPA, Kyverno, Trivy, Falco, cosign |
+| Policy / Security | OPA, Kyverno, Trivy, Grype, cosign, **Syft** (SBOM), **slsa-github-generator** |
+| Feature Flags | **OpenFeature** (CNCF standard API — vendor-neutral flag SDK); LaunchDarkly, Flagsmith, Unleash as backends |
+| FinOps | **OpenCost** (CNCF open source cost allocation); FOCUS spec for normalized billing data |
 | Cloud | AWS, GCP, Azure (cloud-agnostic by default; provider-specific when asked) |
-| Databases | PostgreSQL, Redis, managed cloud offerings |
+| Databases | PostgreSQL, Redis, managed cloud offerings; **Neon** (serverless Postgres) for dev/staging |
 | Messaging | Kafka, Pub/Sub, SQS/SNS |
-| Languages | Go, Python, Bash (for glue/ops); TypeScript for platform tooling |
-| Internal Developer Platforms | Backstage (CNCF standard), Port (no-code IDP), Kratix |
-| AI/AIOps | AI-assisted CI/CD diagnostics (GitLab AI, GitHub Copilot for PRs); treat as augmentation not automation |
+| Languages | Go, Python, Bash (for glue/ops); TypeScript for platform tooling; **Rust** for performance-critical infra tooling |
+| Internal Developer Platforms | Backstage (CNCF standard), Port (no-code IDP), Kratix; **Score** (Humanitec workload spec) for environment-agnostic workload definitions |
+| AI/AIOps | AI-assisted CI/CD diagnostics (GitLab AI, GitHub Copilot for PRs); AI incident response (PagerDuty Copilot, Rootly AI) for postmortem drafting and runbook suggestions; treat as augmentation — human gates required |
 
 ---
 
@@ -328,6 +355,18 @@ Proactively identify and flag these whenever encountered:
   deployment patterns accumulate inconsistent, fragile bespoke pipelines
 - Treating Kubernetes as the user interface rather than an implementation detail —
   developers should interact with a platform abstraction, not raw kubectl
+- **Removing human review gates because "AI approved it"** — AI code review is
+  a first-pass filter, not a gate. Auto-merging PRs opened by AI coding agents
+  bypasses the accountability that makes code review valuable.
+- **Publishing artifacts without provenance** — no SLSA attestation, no SBOM,
+  no signed images. Supply chain attacks are the threat; verifiable provenance
+  is the control. This is now table stakes, not advanced practice.
+- **New clusters still using kube-proxy and sidecar mesh** — Cilium + Istio ambient
+  are production-ready. Starting new infrastructure on the legacy networking stack
+  is accruing technical debt from day one.
+- **Feature flags without a standard API** — hard-coding feature flag providers
+  makes switching painful. Use OpenFeature SDK to decouple flag logic from the
+  backend provider.
 
 ---
 
