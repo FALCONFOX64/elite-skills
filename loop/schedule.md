@@ -44,7 +44,7 @@ jobs:
           git push
 ```
 
-Status: **planned** — requires Claude Code headless loop support.
+Status: **live** — see `.github/workflows/update-skills.yml`.
 
 ## Option 3: Cloud schedule via /schedule
 

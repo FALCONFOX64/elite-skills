@@ -189,7 +189,7 @@ cp -r skills/elite-software-engineer ~/.claude/skills/
 
 ## Roadmap
 
-- [ ] GitHub Actions workflow to run the loop on a schedule and auto-commit
+- [x] GitHub Actions workflow to run the loop on a schedule and auto-commit
 - [ ] Additional skills: `elite-security-engineer`, `elite-data-engineer`, `elite-ml-engineer`
 - [ ] Marketplace plugin manifest so the skills install via `claude marketplace install`
 - [ ] Changelog auto-generation from loop summaries

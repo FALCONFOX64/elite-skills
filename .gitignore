@@ -1,3 +1,5 @@
 .DS_Store
 *.swp
 *.swo
+loop-output.txt
+loop-summary.txt

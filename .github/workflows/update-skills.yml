@@ -1,0 +1,85 @@
+name: Update Elite Skills
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'   # Every Monday at 07:00 UTC
+  workflow_dispatch:        # Manual trigger from GitHub UI
+
+permissions:
+  contents: write
+
+jobs:
+  update-skills:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run skill update loop
+        id: loop
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_NO_TELEMETRY: '1'
+        run: |
+          claude -p "$(cat loop/prompt-ci.md)" \
+            --allowedTools "WebSearch,Read,Write,Edit" \
+            --output-format text \
+            --dangerously-skip-permissions \
+            2>&1 | tee loop-output.txt
+
+          # Capture summary for commit message (last 50 lines of output)
+          tail -50 loop-output.txt > loop-summary.txt
+
+      - name: Check for changes
+        id: diff
+        run: |
+          git diff --quiet skills/ && echo "changed=false" >> $GITHUB_OUTPUT \
+            || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push if skills changed
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "elite-skills-loop[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          SUMMARY=$(cat loop-summary.txt)
+          DATE=$(date +%Y-%m-%d)
+
+          git add skills/
+          git commit -m "loop: update skills with trending tech [$DATE]
+
+$SUMMARY
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+          git push
+
+      - name: Upload loop output as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: loop-output-${{ github.run_id }}
+          path: loop-output.txt
+          retention-days: 30
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.diff.outputs.changed }}" = "true" ]; then
+            echo "### Skills updated" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            git diff HEAD~1 -- skills/ --stat >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "See loop-output artifact for details" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### No changes — skills already current" >> $GITHUB_STEP_SUMMARY
+          fi
