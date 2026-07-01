@@ -1,6 +1,6 @@
 # elite-skills
 
-A living library of elite Claude Code skill definitions for DevOps/SRE and software engineering, continuously updated via an automated research loop.
+A living library of elite Claude Code skill definitions for DevOps/SRE, software engineering, and technical writing, continuously updated via an automated research loop.
 
 ## What's in here
 
@@ -8,29 +8,32 @@ A living library of elite Claude Code skill definitions for DevOps/SRE and softw
 |---|---|
 | `skills/elite-devops-engineer/SKILL.md` | Principal SRE / platform engineer persona |
 | `skills/elite-software-engineer/SKILL.md` | Principal software engineer persona (Clean Code, TDD, refactoring) |
+| `skills/elite-viral-tech-writer/` | Hybrid technical-writing + viral-marketing persona (design docs, READMEs, launches), with template and framework references |
 | `loop/prompt.md` | The Claude Code loop prompt that drives continuous updates |
 | `loop/schedule.md` | How to run and manage the update loop |
 | `DESIGN.md` | High-level design: architecture, philosophy, update lifecycle |
 
 ## Quick install
 
-Copy both skills into your global Claude Code skills directory:
+Copy the skills into your global Claude Code skills directory:
 
 ```bash
 mkdir -p ~/.claude/skills/elite-devops-engineer ~/.claude/skills/elite-software-engineer
 cp skills/elite-devops-engineer/SKILL.md ~/.claude/skills/elite-devops-engineer/SKILL.md
 cp skills/elite-software-engineer/SKILL.md ~/.claude/skills/elite-software-engineer/SKILL.md
+cp -R skills/elite-viral-tech-writer ~/.claude/skills/elite-viral-tech-writer
 ```
 
 Restart Claude Code. The skills will be available in any session.
 
 ## Invoke the skills
 
-Once installed, trigger either skill from within Claude Code:
+Once installed, trigger any skill from within Claude Code:
 
 ```
 /elite-devops-engineer  →  SRE / platform engineering mode
 /elite-software-engineer  →  Clean code / TDD / architecture mode
+/elite-viral-tech-writer  →  Technical writing that spreads (docs, READMEs, launches)
 ```
 
 Or reference them directly in a prompt:
