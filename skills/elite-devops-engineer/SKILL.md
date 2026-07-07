@@ -10,7 +10,7 @@ description: >
   security hardening, cost optimization, and production readiness reviews.
 metadata:
   type: skill
-  version: 1.1.0
+  version: 1.2.0
   author: falconfox
 ---
 
@@ -109,7 +109,10 @@ Before approving or proposing any design, verify:
 - Buy when: TCO including ops burden is lower and vendor lock-in risk is
   acceptable.
 - OSS adopt when: community is active, license is compatible, and you can
-  contribute fixes upstream.
+  contribute fixes upstream. Weigh license trajectory, not just current terms —
+  BSL/SSPL relicensing (Terraform→OpenTofu, Elasticsearch's back-and-forth) has
+  repeatedly forked ecosystems mid-project; prefer foundation-governed projects
+  (CNCF, Linux Foundation) for anything load-bearing.
 - Default to managed cloud services for undifferentiated heavy lifting
   (databases, queues, object storage).
 
@@ -140,7 +143,11 @@ Before approving or proposing any design, verify:
    auto-merged without review are high-risk — require human gate regardless of
    AI confidence score. AI coding agents (agentic loops that open PRs) must
    be subject to the same review process as human contributors: no auto-merge
-   path, no bypassing required checks.
+   path, no bypassing required checks. Where agents need live access to
+   observability/infra state, wire them through **MCP (Model Context Protocol)**
+   servers (Grafana, Kubernetes, PagerDuty, and similar MCP servers now exist
+   for most major platforms) scoped **read-only by default**; write actions
+   still route through the same CI gates as human changes.
 8. **Portable pipelines**: consider Dagger for pipeline logic that needs to
    run identically locally and in CI. Vendor-specific YAML is difficult to
    test offline; Dagger pipelines are containerized and portable.
@@ -152,7 +159,7 @@ Before approving or proposing any design, verify:
    published images.
 
 ### Internal Developer Platform (IDP)
-Platform engineering is the 2026 model for scaling DevOps. Build a thin
+Platform engineering is the standard model for scaling DevOps. Build a thin
 abstraction layer that gives developers self-service access to standardized
 deployment, observability, and secrets — without exposing raw Kubernetes.
 1. **Portal**: Backstage (CNCF-standard, extensible) or Port (faster to
@@ -165,17 +172,25 @@ deployment, observability, and secrets — without exposing raw Kubernetes.
 4. **Kubernetes as an implementation detail**: developers should never need
    to write raw manifests for standard workloads.
 
-### Infrastructure as Code (Terraform / Pulumi)
-1. Remote state with locking (S3+DynamoDB, GCS, Terraform Cloud).
-2. Workspaces or directory-per-environment; never interpolate env name into
+### Infrastructure as Code (OpenTofu / Terraform / Pulumi)
+1. **Tool choice**: default new IaC work to **OpenTofu** rather than Terraform
+   CE — HashiCorp's BSL relicensing and its 2025 acquisition by IBM shifted
+   the risk calculus for a foundation-governed, drop-in-compatible fork
+   (Linux Foundation, native state encryption, no per-vendor licensing risk).
+   Stay on Terraform/HCP where an org already has a paid vendor relationship
+   and migration cost isn't justified — don't relitigate stable estates, but
+   don't inherit Terraform CE by default on new work either.
+2. Remote state with locking (S3+DynamoDB, GCS, HCP Terraform, or an
+   OpenTofu-compatible backend with native state encryption).
+3. Workspaces or directory-per-environment; never interpolate env name into
    resource names for separation of concerns.
-3. Modules for repeatable patterns; versioned and published to a private
+4. Modules for repeatable patterns; versioned and published to a private
    registry.
-4. `terraform plan` output reviewed in PR; apply only via CI, never from
-   local laptops in production.
-5. Policy-as-code enforced: OPA/Conftest or Sentinel for guardrails (no
+5. `plan` output reviewed in PR; apply only via CI, never from local
+   laptops in production.
+6. Policy-as-code enforced: OPA/Conftest or Sentinel for guardrails (no
    public S3 buckets, no 0.0.0.0/0 ingress, required tags, etc.).
-6. Drift detection scheduled; alerts on unmanaged resource changes.
+7. Drift detection scheduled; alerts on unmanaged resource changes.
 
 ### Kubernetes Platform
 1. Namespaces per team/environment; RBAC scoped to namespace.
@@ -203,6 +218,10 @@ deployment, observability, and secrets — without exposing raw Kubernetes.
     (no per-pod sidecars; uses ztunnel + waypoint proxies). Sidecar-based
     Istio is the legacy path; do not start new deployments on it. Linkerd
     sidecar model remains valid for teams that prefer its simplicity.
+13. **Node OS**: for security-sensitive fleets, consider an immutable,
+    API-managed OS (Talos Linux, Flatcar) over general-purpose distros —
+    no SSH, no shell, no package manager attack surface; config is a
+    declarative API call, matching the GitOps model above.
 
 ### Observability Stack
 1. **Metrics**: Prometheus + Thanos (or Mimir) for long-term storage;
@@ -210,7 +229,12 @@ deployment, observability, and secrets — without exposing raw Kubernetes.
 2. **Logs**: structured JSON logs only. Aggregated via Loki, OpenSearch, or
    cloud-native (CloudWatch, Cloud Logging). Correlation IDs mandatory.
 3. **Traces**: OpenTelemetry SDK instrumentation; Tempo or Jaeger backend.
-   Trace sampling strategy: head-based 10% + tail-based on errors.
+   Trace sampling strategy: head-based 10% + tail-based on errors. For legacy
+   or third-party services where adding an SDK is impractical, eBPF-based
+   auto-instrumentation (Grafana Beyla, Odigos) produces OTel-compatible
+   traces and metrics with zero code changes — treat it as a bridge for
+   coverage gaps, not a replacement for native instrumentation on core
+   services.
 4. **Alerting**: alerts on SLO burn rate (multi-window, multi-burn-rate),
    not on raw metrics thresholds. Route via Alertmanager → PagerDuty/Opsgenie.
 5. **Dashboards**: golden signals dashboard per service; cluster/node
@@ -233,6 +257,11 @@ deployment, observability, and secrets — without exposing raw Kubernetes.
    traffic in Kubernetes; enforce STRICT mode PeerAuthentication.
 6. **Compliance scanning**: CIS Benchmark checks automated in CI (kube-bench,
    Prowler for cloud accounts).
+7. **Workload identity**: prefer SPIFFE/SPIRE, or cloud-native workload
+   identity federation (AWS IAM Roles Anywhere, GCP Workload Identity
+   Federation), over long-lived service-account keys for service-to-service
+   and cross-cloud auth — short-lived cryptographic identity eliminates an
+   entire class of leaked-static-secret incidents.
 
 ### Cost & Performance Optimization
 1. Start with measurement: tag-based cost allocation, anomaly detection
@@ -310,16 +339,18 @@ get direct answers, not boilerplate.
 
 | Domain | Preferred Tools |
 |---|---|
-| IaC | Terraform, Pulumi, CDK; **Crossplane** for Kubernetes-native cloud provisioning |
+| IaC | **OpenTofu** (default for new Terraform-compatible work — BSL-free, Linux Foundation governed); Terraform CE/HCP where already standardized; Pulumi, CDK; **Crossplane** for Kubernetes-native cloud provisioning |
 | Containers/Orchestration | Kubernetes, Helm, Kustomize |
 | GitOps | Argo CD, Flux |
 | CI/CD | GitHub Actions, Argo Workflows, Tekton, GitLab CI; **Dagger** for portable pipeline logic |
 | Networking / CNI | **Cilium** (eBPF, replaces kube-proxy); Calico for legacy clusters |
 | Ingress / Traffic | **Kubernetes Gateway API** (production standard); Ingress is legacy |
 | Service Mesh | **Istio ambient mode** (preferred for new deployments); Linkerd (sidecar, simpler ops) |
-| Observability | Prometheus, Grafana, Loki, Tempo, **OpenTelemetry** (now the de facto standard); **SigNoz** / ClickHouse-backed for cost-effective full-stack telemetry |
+| Node OS | **Talos Linux** / Flatcar (immutable, API-managed) for security-sensitive fleets; standard distros elsewhere |
+| Observability | Prometheus, Grafana, Loki, Tempo, **OpenTelemetry** (de facto standard); **Grafana Beyla** / Odigos for eBPF-based zero-code auto-instrumentation; **SigNoz** / ClickHouse-backed for cost-effective full-stack telemetry |
 | eBPF Security | **Tetragon** (runtime security observability at kernel level); Falco (userspace, more mature rule ecosystem) |
 | Secret Management | HashiCorp Vault, AWS Secrets Manager, GCP Secret Manager |
+| Workload Identity | **SPIFFE/SPIRE**; cloud-native federation (IAM Roles Anywhere, Workload Identity Federation) over static service-account keys |
 | Policy / Security | OPA, Kyverno, Trivy, Grype, cosign, **Syft** (SBOM), **slsa-github-generator** |
 | Feature Flags | **OpenFeature** (CNCF standard API — vendor-neutral flag SDK); LaunchDarkly, Flagsmith, Unleash as backends |
 | FinOps | **OpenCost** (CNCF open source cost allocation); FOCUS spec for normalized billing data |
@@ -328,7 +359,7 @@ get direct answers, not boilerplate.
 | Messaging | Kafka, Pub/Sub, SQS/SNS |
 | Languages | Go, Python, Bash (for glue/ops); TypeScript for platform tooling; **Rust** for performance-critical infra tooling |
 | Internal Developer Platforms | Backstage (CNCF standard), Port (no-code IDP), Kratix; **Score** (Humanitec workload spec) for environment-agnostic workload definitions |
-| AI/AIOps | AI-assisted CI/CD diagnostics (GitLab AI, GitHub Copilot for PRs); AI incident response (PagerDuty Copilot, Rootly AI) for postmortem drafting and runbook suggestions; treat as augmentation — human gates required |
+| AI/AIOps | AI-assisted CI/CD diagnostics (GitLab AI, GitHub Copilot for PRs); AI incident response (PagerDuty Copilot, Rootly AI, Resolve AI) for postmortem drafting and runbook suggestions; **MCP (Model Context Protocol)** as the emerging standard for wiring AI agents into observability/infra tool calls (Grafana, Kubernetes, PagerDuty and other MCP servers); treat as augmentation — human gates required |
 
 ---
 
@@ -343,7 +374,7 @@ Proactively identify and flag these whenever encountered:
 - Manual production changes outside of version-controlled automation
 - Missing readiness probes (causes traffic to hit unready pods)
 - `latest` image tags in any non-ephemeral environment
-- Terraform state in local files or unversioned S3 without locking
+- Terraform/OpenTofu state in local files or unversioned S3 without locking
 - Single-AZ deployments for anything with an SLO
 - Alert on CPU % or memory % as the primary signal (use saturation + latency)
 - "We'll add monitoring later"
@@ -358,6 +389,9 @@ Proactively identify and flag these whenever encountered:
 - **Removing human review gates because "AI approved it"** — AI code review is
   a first-pass filter, not a gate. Auto-merging PRs opened by AI coding agents
   bypasses the accountability that makes code review valuable.
+- **Granting AI agents write-scoped MCP/tool access by default** — start every
+  agent-to-infra integration read-only; promote to scoped write access only
+  after the same review bar applied to human-authored changes.
 - **Publishing artifacts without provenance** — no SLSA attestation, no SBOM,
   no signed images. Supply chain attacks are the threat; verifiable provenance
   is the control. This is now table stakes, not advanced practice.
@@ -367,6 +401,10 @@ Proactively identify and flag these whenever encountered:
 - **Feature flags without a standard API** — hard-coding feature flag providers
   makes switching painful. Use OpenFeature SDK to decouple flag logic from the
   backend provider.
+- **Standardizing on Terraform CE for new IaC by default, without evaluating
+  OpenTofu** — the BSL license and HashiCorp's 2025 acquisition by IBM changed
+  the risk calculus. Know why you picked one over the other; don't inherit
+  Terraform CE out of habit.
 
 ---
 

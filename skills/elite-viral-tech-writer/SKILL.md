@@ -124,8 +124,10 @@ asking.
 3. **One idea per sentence. One argument per section.** Density is achieved
    through cutting, not compressing.
 4. **Show the thing.** Code block before paragraph. Diagram before
-   description. `curl` command before feature list. Readers trust what they
-   can run.
+   description — sketch it as code (Mermaid or D2, both render natively on
+   GitHub/GitLab now) so it lives in the repo and stays in sync with the doc
+   instead of rotting as a stale PNG. `curl` command before feature list.
+   Readers trust what they can run.
 5. **Write to one reader.** "You" — a specific person with a job to do (JTBD).
    Name their pain before your solution.
 6. **The nerd-snipe is the noblest hook.** For technical audiences, an
@@ -142,6 +144,15 @@ asking.
 10. **Kill hedging in public writing.** "We think this might potentially
     help" → "This helps when X; it doesn't when Y." Precision about limits
     reads as confidence, not weakness.
+11. **Write for the machine reader too.** A growing share of your traffic is
+    an LLM agent fetching raw markdown, not a human scrolling — via
+    `llms.txt`/`llms-full.txt`, RAG ingestion, or a coding agent reading your
+    repo to integrate with it. Keep structure literal: real headers (not
+    bolded paragraphs pretending to be headers), the runnable command as
+    plain text (never only inside a screenshot or a JS-rendered tab), and no
+    meaning encoded solely in an image. This costs nothing for human readers
+    and is now table stakes for developer tools — Anthropic, Stripe, and
+    Vercel all ship an `llms.txt` alongside their docs.
 
 ---
 
@@ -185,16 +196,23 @@ Compact skeletons below; full annotated templates with worked guidance live in
 [references/templates.md](references/templates.md). Read that file when
 producing any of these artifacts end-to-end.
 
-**Viral README** *(Hybrid)* — one-line what+why-care → 30-second demo
-(code/gif) → "why this exists" story (3 sentences) → install → core usage
-(runnable) → honest comparison table → limits stated plainly → contributing →
-one CTA.
+**Viral README** *(Hybrid)* — one-line what+why-care → 30-second demo (code
+block, terminal recording via `asciinema`/`vhs`, or GIF as a last resort) →
+"why this exists" story (3 sentences) → install → core usage (runnable) →
+honest comparison table → limits stated plainly → contributing → one CTA. If
+the project is a library, API, or CLI another tool or agent will integrate
+with, ship an `llms.txt` alongside the README — top OSS and API projects now
+write docs assuming both a human and an LLM agent will read them.
 
 **Design Doc** *(Design)* — title + status + reviewers → context: the problem
 and why now (this is the hook — write it like one) → goals / non-goals →
-proposed design (C4-style: context → containers → components) → alternatives
-considered *with real reasons for rejection* → risks & mitigations → rollout
-plan → open questions.
+proposed design (C4-style: context → containers → components, diagrammed in
+Mermaid/D2 so it reviews and diffs like code) → alternatives considered *with
+real reasons for rejection* → risks & mitigations → rollout plan → open
+questions. Default delivery for most teams now is a Markdown doc in-repo (an
+`rfcs/` or `docs/adr/` folder) reviewed as a PR, not a Google Doc — comments
+live in version control next to the code they govern; fall back to a doc tool
+only when the org's process requires it.
 
 **ADR** *(Design, Nygard format)* — title → status → context (forces in
 tension) → decision (active voice: "We will...") → consequences (good AND
@@ -267,6 +285,10 @@ or gets cut.
 - **The no-downside ADR / comparison table where you win every row**: reads
   as sales, functions as noise. Conceding real trade-offs is what makes the
   rest believable.
+- **Docs invisible to machine readers**: the quickstart command only exists
+  inside a screenshot, or lives behind a JS-rendered tab — a human skimmer
+  and an LLM agent fetching raw markdown both miss it. Keep the copy-pasteable
+  command in plain text, always.
 - **CTA buffet**: five calls to action equals none. One door.
 
 ---
@@ -322,3 +344,11 @@ side: JTBD, AIDA, PAS, hook-story-offer, SUCCESs (Made to Stick), positioning
 documentation framework, Amazon working-backwards PR/FAQ, Google-style design
 doc culture. Consult it when choosing a structure or when a draft feels
 structurally wrong but you can't name why.
+
+Current tooling baseline (not optional extras — expected by top practitioners
+as of 2026): Mermaid or D2 for diagrams-as-code instead of static images;
+`asciinema`/`vhs` for terminal-accurate demos instead of GIFs; `llms.txt` /
+`llms-full.txt` for AI-agent-readable docs on any project with an API,
+library, or CLI surface; docs sites built on Mintlify, Fumadocs, or
+Docusaurus rather than hand-rolled static sites, when a hosted docs site is
+warranted at all.
