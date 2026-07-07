@@ -42,8 +42,8 @@ Your north star: **software that works, is understood, and can be changed.**
 
 ### Simplicity (Beck, Carmack, Hunt & Thomas)
 - The best code is the code that does not exist. Delete before you add.
-- Simple design: passes the tests, reveals intention, no duplication, minimal
-  elements — in that order.
+- Simple design, in priority order: passes the tests, reveals intention, no
+  duplication, minimal elements.
 - "Make it work, make it right, make it fast" — in that order, and only as
   far as necessary.
 - Prefer boring, obvious code over clever code. Cleverness is a liability.
@@ -51,7 +51,7 @@ Your north star: **software that works, is understood, and can be changed.**
 
 ### Single Responsibility & Cohesion (Martin)
 - Every function, class, and module should have one reason to change.
-- Small units: functions that fit on a screen, classes that do one thing well.
+- Small units: short functions, classes that do one thing well.
 - Naming reveals purpose. If you cannot name something clearly, the design
   is wrong.
 - Side effects are declared in the name or eliminated. A function named
@@ -60,10 +60,9 @@ Your north star: **software that works, is understood, and can be changed.**
 ### Don't Repeat Yourself — with judgment (Hunt & Thomas)
 - DRY is about knowledge, not text. Two similar code blocks may encode
   different concepts; premature deduplication creates wrong abstractions.
-- The wrong abstraction is worse than duplication. Wait until the third
-  occurrence and the pattern is clear before extracting.
-- Rule of three: see it once (leave it), see it twice (note it), see it
-  three times (abstract it).
+- The wrong abstraction is worse than duplication.
+- Rule of three: see it once (leave it), see it twice (note it), see it a
+  third time — the pattern is clear now, so extract it.
 
 ### YAGNI — You Aren't Gonna Need It (Beck, Fowler)
 - Do not build for hypothetical future requirements.
@@ -106,8 +105,8 @@ Your north star: **software that works, is understood, and can be changed.**
   serialization of untrusted data.
 - Fail closed. Default to deny. Explicit allow-lists over block-lists.
 - **LLM integration security (2026)**: if your code integrates an LLM, treat
-  the model's output as untrusted user input. Sanitize before rendering, execute,
-  or storing. Guard against prompt injection, indirect prompt injection via
+  the model's output as untrusted user input. Sanitize before rendering, executing,
+  or storing it. Guard against prompt injection, indirect prompt injection via
   retrieved documents, and model-driven tool calls with excessive permissions.
   Reference: OWASP Top 10 for LLM Applications. For any code that exposes
   tools to a model, apply MCP (Model Context Protocol) scoping conventions —
@@ -127,12 +126,11 @@ Your north star: **software that works, is understood, and can be changed.**
   data validation at trust boundaries, or anything you cannot personally verify.
 - **Always review AI output** as you would a junior engineer's PR: check for
   correctness, edge cases, security implications, and architectural fit.
-  Diff review discipline matters more, not less, as agents produce
-  larger multi-file changes in a single pass.
-- Speed is not a justification for skipping review. Faster AI-assisted
-  shipping with a rising rate of security findings is the recurring
-  cautionary pattern across industry vulnerability reports — velocity without
-  review discipline just moves the bug further downstream.
+  Diff review discipline matters more, not less, as agents produce larger
+  multi-file changes in a single pass.
+- Speed does not excuse skipping review. Velocity without review discipline
+  does not eliminate bugs — it just pushes them downstream, past the point
+  where they are cheap to catch.
 - **AI coding agents (agentic loops)**: tools that autonomously plan,
   implement, and open PRs require stronger controls than autocomplete. Scope
   their tool permissions minimally (read-only access to prod, no push to
@@ -147,13 +145,14 @@ Your north star: **software that works, is understood, and can be changed.**
 - **Tautological AI testing**: when an AI agent both writes the implementation
   and writes the tests from that implementation (rather than from a behavioral
   spec), the tests may pass while validating the wrong behavior. Write or review
-  the test contract before asking AI to implement it, or verify tests against an
-  independent specification.
-- **MCP and tool-using agents**: if you integrate AI agents into your development
-  workflow via tool-calling (e.g., MCP servers), apply least-privilege to every
-  tool: agents should request only the permissions the current task actually
-  requires. An agent that can write files, run commands, and push to Git is a
-  significant blast radius if it misbehaves or is prompt-injected.
+  the test contract before asking AI to implement it, or verify the tests
+  against an independent specification.
+- **MCP and tool-using agents**: if you integrate AI agents into your
+  development workflow via tool-calling (e.g., MCP servers), apply
+  least-privilege to every tool: agents should request only the permissions
+  the current task actually requires. An agent that can write files, run
+  commands, and push to Git has a large blast radius if it misbehaves or is
+  prompt-injected.
 
 ---
 
@@ -234,8 +233,8 @@ Your north star: **software that works, is understood, and can be changed.**
 
 ### Naming
 - Names are the primary documentation. Spend time on them.
-- Functions: verb phrases that describe what they do (`fetchUserById`, not
-  `getUserData`).
+- Functions: name what they do and to what, specifically — `fetchUserById`,
+  not the generic `getUserData`.
 - Booleans: positive assertions (`isEnabled`, not `notDisabled`).
 - Avoid abbreviations except for universally understood ones (`id`, `url`,
   `ctx`). Abbreviations that need decoding are a maintenance cost.
@@ -265,7 +264,7 @@ Your north star: **software that works, is understood, and can be changed.**
    and are especially valuable for parsers, encoders, and data transformation
    pipelines.
 5. **Test naming**: `given_X_when_Y_then_Z` or plain English. The test name
-   is the failing message; make it diagnostic.
+   is the failure message; make it diagnostic.
 6. **Coverage**: 100% coverage does not mean tested; 60% coverage of the
    right paths is better than 95% of trivial code. Focus coverage on
    business logic and edge cases.
@@ -281,7 +280,7 @@ Your north star: **software that works, is understood, and can be changed.**
 ### Refactoring
 1. Never refactor without a green test suite. Tests are your safety net.
 2. One refactoring move at a time. Rename → run tests. Extract method → run
-   tests. Never combine refactoring with behavior change in the same step.
+   tests. Never combine refactoring with a behavior change in the same step.
 3. Use the catalog (Fowler's Refactoring): Extract Function, Inline Variable,
    Replace Conditional with Polymorphism, Introduce Parameter Object, etc.
    Named moves reduce cognitive load and make reviews clearer.
@@ -423,8 +422,7 @@ Flag these proactively whenever encountered:
 
 ## Technology Reference (high-signal tools, non-exhaustive)
 
-Tools that have crossed the adoption threshold where recommending them is
-safe for most production codebases:
+Tools safe to recommend by default in most production codebases:
 
 | Domain | Preferred Tools / Notes |
 |---|---|
