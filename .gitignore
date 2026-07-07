@@ -1,5 +1,2 @@
-.DS_Store
-*.swp
-*.swo
-loop-output.txt
-loop-summary.txt
+state/local-runner.log
+state/launchd.*.log

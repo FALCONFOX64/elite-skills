@@ -1,0 +1,33 @@
+{
+  "$comment": "Template for audit-logs/summary-report.json, produced by loop/generate_summary.py at the end of the 7-day schedule. Values below describe each field.",
+  "report_type": "7-day-summary",
+  "generated_at": "<ISO 8601 UTC timestamp>",
+  "schedule": {
+    "started_at": "<ISO 8601 — when --start was run>",
+    "total_cycles": 168,
+    "day": "<schedule day of the first cycle>"
+  },
+  "cycles_executed": "<integer — cycles that actually ran (≤168)>",
+  "first_cycle_at": "<ISO 8601>",
+  "last_cycle_at": "<ISO 8601>",
+  "totals": {
+    "skill_tasks_run": "<integer — skills × cycles attempted>",
+    "improvements_applied": "<integer — revisions committed>",
+    "regressions_reverted": "<integer — revisions discarded by the judge guard>",
+    "failures": "<integer — tasks that exhausted 3 retries>",
+    "aggregate_score_delta": "<number — sum of all applied score deltas>"
+  },
+  "per_skill": {
+    "<skill-name>": {
+      "first_score": "<number 0-100 — baseline at first cycle>",
+      "latest_score": "<number 0-100>",
+      "net_delta": "<number — latest minus first>",
+      "improvements_applied": "<integer>",
+      "regressions_reverted": "<integer>",
+      "failures": "<integer>",
+      "dimensions_covered": ["<list of improvement dimensions applied>"]
+    }
+  },
+  "errors": ["<flattened list of every error object from all cycle audit logs>"],
+  "next_steps": "<guidance string: acknowledge reminder, start new schedule>"
+}
