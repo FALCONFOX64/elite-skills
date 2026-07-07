@@ -11,7 +11,7 @@ description: >
   structure, performance, and any "how should I build this?" question.
 metadata:
   type: skill
-  version: 1.1.0
+  version: 1.2.0
   author: falconfox
 ---
 
@@ -109,26 +109,41 @@ Your north star: **software that works, is understood, and can be changed.**
   the model's output as untrusted user input. Sanitize before rendering, execute,
   or storing. Guard against prompt injection, indirect prompt injection via
   retrieved documents, and model-driven tool calls with excessive permissions.
-  Reference: OWASP Top 10 for LLM Applications.
+  Reference: OWASP Top 10 for LLM Applications. For any code that exposes
+  tools to a model, apply MCP (Model Context Protocol) scoping conventions —
+  least-privilege tool grants, explicit consent for write/execute actions, and
+  audit logging of every tool call.
 
 ### AI-Augmented Development (How to Use It Well)
-- AI coding assistants are a legitimate productivity tool when used deliberately.
-  92% of developers use them; 51% daily (Stack Overflow 2025).
+- Agentic coding tools — **Claude Code**, Cursor, GitHub Copilot Workspace,
+  Windsurf, Devin — have moved past autocomplete: they plan multi-step
+  changes, run tests, and open PRs autonomously. Treat the choice of tool as
+  an engineering decision, not a preference; the controls below apply
+  regardless of which one a team standardizes on.
 - **Use AI for**: boilerplate, test scaffolding, documentation, refactoring
   suggestions, explaining unfamiliar code, first-pass implementations of
-  well-understood patterns.
+  well-understood patterns, and multi-file agentic changes with a clear spec.
 - **Do not delegate to AI**: security-sensitive code, auth flows, cryptography,
   data validation at trust boundaries, or anything you cannot personally verify.
 - **Always review AI output** as you would a junior engineer's PR: check for
   correctness, edge cases, security implications, and architectural fit.
-- Speed is not a justification for skipping review. AI-assisted teams committing
-  3-4× faster while security findings rose 10× (Veracode 2026) is the cautionary
-  data point.
-- **AI coding agents (agentic loops)**: tools that autonomously plan, implement,
-  and open PRs require stronger controls than autocomplete. Scope their tool
-  permissions minimally (read-only access to prod, no push to main, no ability
-  to approve their own PRs). Review agent-authored PRs with more scrutiny, not
-  less — agents optimize for passing tests, which is not the same as correctness.
+  Diff review discipline matters more, not less, as agents produce
+  larger multi-file changes in a single pass.
+- Speed is not a justification for skipping review. Faster AI-assisted
+  shipping with a rising rate of security findings is the recurring
+  cautionary pattern across industry vulnerability reports — velocity without
+  review discipline just moves the bug further downstream.
+- **AI coding agents (agentic loops)**: tools that autonomously plan,
+  implement, and open PRs require stronger controls than autocomplete. Scope
+  their tool permissions minimally (read-only access to prod, no push to
+  main, no ability to approve their own PRs, sandboxed or worktree-isolated
+  execution for anything destructive). Review agent-authored PRs with more
+  scrutiny, not less — agents optimize for passing tests, which is not the
+  same as correctness.
+- **Spec-first agentic workflows**: for larger agent-driven changes, write or
+  confirm the behavioral spec (acceptance criteria, example inputs/outputs)
+  before letting the agent implement — this is what separates a reviewable
+  agentic PR from an unreviewable one.
 - **Tautological AI testing**: when an AI agent both writes the implementation
   and writes the tests from that implementation (rather than from a behavioral
   spec), the tests may pass while validating the wrong behavior. Write or review
@@ -230,7 +245,9 @@ Your north star: **software that works, is understood, and can be changed.**
 
 ### Testing Strategy
 1. **Unit tests**: fast, isolated, no I/O. Test one unit of behavior.
-   Majority of your tests.
+   Majority of your tests. Use **Vitest** over Jest for new TS/JS projects
+   (native ESM, faster, Jest-compatible API) unless the codebase already has
+   a mature Jest suite not worth migrating.
 2. **Integration tests**: test the collaboration between real components
    (e.g., service + database). Fewer, but essential for seam contracts.
    Use **Testcontainers** to spin up real databases, queues, and services
@@ -238,7 +255,9 @@ Your north star: **software that works, is understood, and can be changed.**
    infrastructure. The gap between a mocked DB and a real one catches bugs
    that matter.
 3. **End-to-end tests**: test the system from the user's perspective. Slow
-   and expensive — use sparingly for critical paths only.
+   and expensive — use sparingly for critical paths only. **Playwright** is
+   the default choice for browser E2E over Selenium/Cypress for new suites:
+   faster, auto-waiting, first-class multi-browser and multi-tab support.
 4. **Property-based tests**: when you can define invariants that must always
    hold regardless of input (e.g., serialization round-trips, sorted output,
    idempotency). Use Hypothesis (Python), fast-check (TypeScript/JS), or
@@ -281,6 +300,9 @@ Your north star: **software that works, is understood, and can be changed.**
   handling, security implications, and performance on the critical path.
 - Praise good work. Reinforcing excellent patterns is as valuable as
   catching mistakes.
+- Pair automated review (AI-assisted review bots, CI static analysis) with
+  human review — never let bot approval substitute for a human reading the
+  diff on anything touching auth, data access, or money.
 
 **Receiving reviews:**
 - Separate your ego from your code. Every review is an opportunity to
@@ -368,27 +390,34 @@ Flag these proactively whenever encountered:
   `Utils` — these names hide responsibility
 - Inconsistent error handling (some paths return errors, some throw, some
   silently swallow)
-- **Vibe coding without review**: accepting AI-generated code without
-  understanding it. Veracode (2026): 45% of AI-generated code introduces OWASP
-  Top 10 vulnerabilities. AI is a powerful pair programmer, not an authority.
-- **Hardcoded secrets in AI-assisted commits**: GitGuardian 2026 report found
-  AI-assisted commits leak secrets at 2× the baseline rate. Run secret scanning
-  in pre-commit hooks on every repo, no exceptions.
+- **Vibe coding without review**: accepting AI-generated code — whether from
+  chat, autocomplete, or an autonomous agent — without understanding it.
+  Independent code-security studies continue to find that a large share of
+  AI-generated code introduces OWASP Top 10-class vulnerabilities. AI is a
+  powerful pair programmer, not an authority.
+- **Hardcoded secrets in AI-assisted commits**: AI-assisted commits leak
+  secrets at a measurably higher rate than hand-written ones. Run secret
+  scanning in pre-commit hooks on every repo, no exceptions.
 - **LLM input/output without validation**: if your software passes user input
   to an LLM or renders LLM output, treat it as an untrusted boundary — prompt
   injection, data exfiltration, and hallucinated actions are live attack vectors
-  (OWASP Top 10 for LLM Applications 2025).
+  (OWASP Top 10 for LLM Applications).
 - **Tautological AI testing**: AI writes tests from AI-generated code rather
   than from a behavioral contract. The tests pass; the behavior is wrong. Always
   anchor tests to a specification that exists independently of the implementation.
 - **Agent tool permissions that exceed the task scope**: AI coding agents given
   write access to prod systems, ability to approve their own PRs, or unrestricted
   shell access are a security incident waiting to happen. Scope tightly; audit
-  regularly.
+  regularly. This applies equally to MCP-connected agents — audit which servers
+  and tools an agent can reach, not just what it does with them.
 - **Mocking infrastructure in integration tests when Testcontainers is available**:
   in-memory database fakes accumulate subtle behavioral divergences. Real
   containers via Testcontainers are cheap enough that there is no excuse for
-  this in 2026.
+  this today.
+- **Stale toolchains carried out of habit**: reaching for pip/virtualenv,
+  Jest, or ESLint+Prettier by default on a new project when uv, Vitest, and
+  Biome solve the same problem faster with less configuration. Inertia is not
+  a technical reason.
 
 ---
 
@@ -400,13 +429,19 @@ safe for most production codebases:
 | Domain | Preferred Tools / Notes |
 |---|---|
 | Integration testing | **Testcontainers** — real DB/queue/service instances in tests; now the standard |
+| End-to-end / browser testing | **Playwright** — default over Selenium/Cypress for new suites |
+| Unit testing (TS/JS) | **Vitest** — default over Jest for new projects; native ESM, faster |
 | Property-based testing | **Hypothesis** (Python), **fast-check** (TS/JS), **proptest** (Rust) |
 | Workflow / durable execution | **Temporal** — reliable async workflows, retries, saga orchestration without hand-rolled state machines |
 | Feature flags | **OpenFeature** SDK (vendor-neutral API); pairs with any backend |
+| Python packaging & envs | **uv** — replaces pip + virtualenv + poetry/pip-tools for most workflows; 10–100× faster installs |
 | Python linting / formatting | **Ruff** — replaces flake8 + isort + many plugins; 10–100× faster |
+| JS/TS linting / formatting | **Biome** — single fast tool replacing ESLint + Prettier for new projects; keep ESLint where a plugin ecosystem is load-bearing |
 | API contracts | **OpenAPI 3.1** for REST; **Buf** for Protobuf schema registry and breaking-change detection |
 | Data validation | **Pydantic v2** (Python), **Zod** (TypeScript) — parse, don't validate |
 | Observability SDK | **OpenTelemetry** — instrument once, export anywhere; use auto-instrumentation as a floor |
+| Agentic coding tools | **Claude Code**, Cursor, GitHub Copilot Workspace — treat as autonomous collaborators requiring scoped permissions, not just autocomplete |
+| Agent tool integration | **MCP (Model Context Protocol)** — the emerging standard for exposing tools/data to coding agents; apply least-privilege scoping to every server |
 | Edge / Wasm targets | **WebAssembly Component Model** — use for security-sandboxed plugins or edge compute; not a general application target yet |
 | Rust for tooling | Reach for Rust when building CLI tools, parsers, or data pipelines where performance and correctness are both required |
 
