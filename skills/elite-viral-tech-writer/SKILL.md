@@ -36,7 +36,7 @@ Aliases: `/viral-doc`, `/design-viral`, `/elite-writer`
 
 The user may point at a repo, paste a draft, describe a product, or just name
 an artifact ("PRD for the sync feature"). If the artifact type or audience is
-unclear, ask — one question, then write.
+unclear, ask one question, then write.
 
 ---
 
@@ -108,8 +108,7 @@ passes the Rigor Gate — you just lead with the feeling and link to the proof.
 
 **Defaults when the user doesn't specify:** README → Hybrid. Anything with
 "launch/announce/promote" → Marketing. Anything with "design/spec/plan/ADR" →
-Design. When genuinely ambiguous, ask which mode — it's the one question worth
-asking.
+Design. When genuinely ambiguous, ask which mode.
 
 ---
 
@@ -121,11 +120,11 @@ asking.
 2. **Specificity is credibility.** "Reduces p99 latency from 340ms to 45ms"
    beats "blazingly fast." A named failure mode beats "robust." One real
    example beats three adjectives.
-3. **One idea per sentence. One argument per section.** Density is achieved
-   through cutting, not compressing.
+3. **One idea per sentence. One argument per section.** Achieve density by
+   cutting, not compressing.
 4. **Show the thing.** Code block before paragraph. Diagram before
-   description — sketch it as code (Mermaid or D2, both render natively on
-   GitHub/GitLab now) so it lives in the repo and stays in sync with the doc
+   description — sketch it as code (Mermaid or D2 render natively on
+   GitHub/GitLab) so it lives in the repo and stays in sync with the doc
    instead of rotting as a stale PNG. `curl` command before feature list.
    Readers trust what they can run.
 5. **Write to one reader.** "You" — a specific person with a job to do (JTBD).
@@ -147,12 +146,12 @@ asking.
 11. **Write for the machine reader too.** A growing share of your traffic is
     an LLM agent fetching raw markdown, not a human scrolling — via
     `llms.txt`/`llms-full.txt`, RAG ingestion, or a coding agent reading your
-    repo to integrate with it. Keep structure literal: real headers (not
-    bolded paragraphs pretending to be headers), the runnable command as
+    repo to integrate with your project. Keep structure literal: real headers
+    (not bolded paragraphs pretending to be headers), the runnable command as
     plain text (never only inside a screenshot or a JS-rendered tab), and no
     meaning encoded solely in an image. This costs nothing for human readers
-    and is now table stakes for developer tools — Anthropic, Stripe, and
-    Vercel all ship an `llms.txt` alongside their docs.
+    and is table stakes for developer tools — Anthropic, Stripe, and Vercel
+    all ship an `llms.txt` alongside their docs.
 
 ---
 
@@ -212,7 +211,7 @@ real reasons for rejection* → risks & mitigations → rollout plan → open
 questions. Default delivery for most teams now is a Markdown doc in-repo (an
 `rfcs/` or `docs/adr/` folder) reviewed as a PR, not a Google Doc — comments
 live in version control next to the code they govern; fall back to a doc tool
-only when the org's process requires it.
+only when the org's process requires one.
 
 **ADR** *(Design, Nygard format)* — title → status → context (forces in
 tension) → decision (active voice: "We will...") → consequences (good AND
