@@ -1,0 +1,78 @@
+name: Skill Improvement Loop
+
+on:
+  schedule:
+    # Hourly. The runner itself decides whether a cycle is due (active
+    # schedule, ≥45 min since last run, previous PR merged) so stray or
+    # delayed cron fires are safe no-ops.
+    - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "start = begin a new 7-day schedule, run = force one cycle now, stop = deactivate"
+        type: choice
+        options: [run, start, stop]
+        default: run
+
+concurrency:
+  group: skill-improvement-loop
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          # PAT (when configured) so pushed branches/PRs trigger the
+          # `validate` workflow — GITHUB_TOKEN-created PRs cannot.
+          token: ${{ secrets.LOOP_PAT || github.token }}
+
+      - name: Fast exit when no schedule is active
+        id: guard
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "active=true" >> "$GITHUB_OUTPUT"
+          elif jq -e '.active == true' state/loop-state.json >/dev/null 2>&1; then
+            echo "active=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            echo "No active improvement schedule — skipping."
+          fi
+
+      - name: Set up Node
+        if: steps.guard.outputs.active == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Claude Code CLI
+        if: steps.guard.outputs.active == 'true'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git identity
+        if: steps.guard.outputs.active == 'true'
+        run: |
+          git config user.name "skill-improvement-bot"
+          git config user.email "skill-improvement-bot@users.noreply.github.com"
+
+      - name: Run cycle
+        if: steps.guard.outputs.active == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.LOOP_PAT || github.token }}
+          ELITE_LOOP_MODEL: ${{ vars.ELITE_LOOP_MODEL || 'claude-sonnet-5' }}
+        run: |
+          case "${{ github.event.inputs.action || 'run' }}" in
+            start) python3 loop/run_cycle.py --start ;;
+            stop)  python3 loop/run_cycle.py --stop ;;
+            run)   python3 loop/run_cycle.py ;;
+          esac

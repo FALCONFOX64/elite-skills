@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FALCONFOX64/elite-skills/schemas/audit-log.schema.json",
+  "title": "Skill Improvement Cycle Audit Log",
+  "description": "One file per loop cycle: audit-logs/cycle-{number}-{YYYY-MM-DD-HH-MM}.json",
+  "type": "object",
+  "required": ["cycle", "timestamp", "branch", "elite_skills_processed", "results", "errors", "memory_storage"],
+  "properties": {
+    "cycle": {"type": "integer", "minimum": 1, "description": "Cycle number within the schedule (1..168)"},
+    "timestamp": {"type": "string", "format": "date-time", "description": "Cycle start, ISO 8601 UTC"},
+    "schedule": {
+      "type": "object",
+      "properties": {
+        "started_at": {"type": "string", "format": "date-time"},
+        "total_cycles": {"type": "integer"},
+        "day": {"type": "integer", "minimum": 1, "maximum": 8}
+      }
+    },
+    "branch": {"type": "string", "pattern": "^skill-improvement/cycle-", "description": "Feature branch created for this cycle"},
+    "model": {"type": "string"},
+    "elite_skills_processed": {"type": "array", "items": {"type": "string"}},
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["skill", "cycle", "timestamp", "status", "action", "delta"],
+        "properties": {
+          "skill": {"type": "string"},
+          "cycle": {"type": "integer"},
+          "timestamp": {"type": "string", "format": "date-time"},
+          "dimension": {"type": ["string", "null"], "enum": ["currency", "clarity", "actionability", "coverage", "examples", "anti-patterns", "structure", null]},
+          "status": {"type": "string", "enum": ["improved", "reverted-regression", "no-change", "failed"]},
+          "action": {"type": "string", "description": "Human-readable description of the action taken"},
+          "score_before": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+          "score_after": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+          "delta": {"type": "number", "description": "score_after - score_before"},
+          "scores_before": {"type": "object", "description": "Per-dimension judge scores before the change"},
+          "scores_after": {"type": "object", "description": "Per-dimension judge scores after the change"},
+          "commit": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$", "description": "Git commit hash, null if no commit was made"}
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["skill", "error", "attempts", "timestamp"],
+        "properties": {
+          "skill": {"type": "string"},
+          "error": {"type": "string"},
+          "attempts": {"type": "integer", "maximum": 3},
+          "timestamp": {"type": "string", "format": "date-time"}
+        }
+      }
+    },
+    "memory_storage": {
+      "type": "object",
+      "required": ["backend", "path", "confirmed"],
+      "properties": {
+        "backend": {"type": "string", "const": "file-json"},
+        "path": {"type": "string"},
+        "confirmed": {"type": "boolean", "description": "Memory store was written for this cycle"}
+      }
+    },
+    "dry_run": {"type": "boolean"}
+  }
+}

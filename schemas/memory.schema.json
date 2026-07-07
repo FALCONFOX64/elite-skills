@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FALCONFOX64/elite-skills/schemas/memory.schema.json",
+  "title": "Skill Improvement Memory Store",
+  "description": "Version-controlled file-based JSON memory at memory/store.json. Queried each cycle to rotate improvement dimensions and avoid redundant actions.",
+  "type": "object",
+  "required": ["version", "backend", "skills"],
+  "properties": {
+    "version": {"type": "integer", "const": 1},
+    "backend": {"type": "string", "const": "file-json"},
+    "updated_at": {"type": ["string", "null"], "format": "date-time"},
+    "skills": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["category", "history", "dimensions_covered", "cumulative_trend"],
+        "properties": {
+          "category": {"type": "string", "description": "Skill category derived from the skill name"},
+          "history": {
+            "type": "array",
+            "description": "Append-only log of every improvement attempt for this skill",
+            "items": {
+              "type": "object",
+              "required": ["cycle", "timestamp", "status", "action", "delta"],
+              "properties": {
+                "skill": {"type": "string"},
+                "cycle": {"type": "integer"},
+                "timestamp": {"type": "string", "format": "date-time"},
+                "dimension": {"type": ["string", "null"]},
+                "status": {"type": "string", "enum": ["improved", "reverted-regression", "no-change", "failed"]},
+                "action": {"type": "string"},
+                "score_before": {"type": ["number", "null"]},
+                "score_after": {"type": ["number", "null"]},
+                "delta": {"type": "number"},
+                "commit": {"type": ["string", "null"]}
+              }
+            }
+          },
+          "dimensions_covered": {
+            "type": "object",
+            "description": "dimension name -> last cycle number it was improved; the runner picks the minimum to avoid redundancy",
+            "additionalProperties": {"type": "integer"}
+          },
+          "cumulative_trend": {
+            "type": "object",
+            "required": ["first_score", "latest_score", "net_delta", "improvements"],
+            "properties": {
+              "first_score": {"type": ["number", "null"]},
+              "latest_score": {"type": ["number", "null"]},
+              "net_delta": {"type": "number"},
+              "improvements": {"type": "integer"},
+              "regressions_reverted": {"type": "integer"},
+              "failures": {"type": "integer"}
+            }
+          }
+        }
+      }
+    }
+  }
+}
