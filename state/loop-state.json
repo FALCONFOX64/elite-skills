@@ -1,9 +1,10 @@
 {
-  "active": true,
+  "active": false,
   "started_at": "2026-07-07T17:25:08Z",
   "total_cycles": 168,
   "period_days": 7,
   "cycles_completed": 2,
   "last_run_at": "2026-07-07T19:25:08Z",
-  "last_branch": "skill-improvement/cycle-002-20260707T1925"
+  "last_branch": "skill-improvement/cycle-002-20260707T1925",
+  "stopped_at": "2026-07-13T18:55:20Z"
 }
