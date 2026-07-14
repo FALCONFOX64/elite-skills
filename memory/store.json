@@ -1,7 +1,7 @@
 {
   "version": 1,
   "backend": "file-json",
-  "updated_at": "2026-07-14T18:27:16Z",
+  "updated_at": "2026-07-14T18:33:28Z",
   "skills": {
     "elite-devops-engineer": {
       "category": "devops engineer",
@@ -160,17 +160,28 @@
           "status": "improved",
           "action": "clarity revision applied",
           "commit": "f257c3b8dbf9f5c7ba3d5831a781fb19bab6de98"
+        },
+        {
+          "skill": "elite-software-engineer",
+          "cycle": 3,
+          "timestamp": "2026-07-14T18:33:28Z",
+          "dimension": "currency",
+          "score_before": 89,
+          "score_after": 94,
+          "delta": 4,
+          "status": "improved",
+          "action": "v1.3.0: agent worktree isolation, read-only MCP default, RAG untrusted input, mutation+adversarial tests, anti-patterns for CI-green agent merges / unbounded diffs / citation-as-proof"
         }
       ],
       "dimensions_covered": {
-        "currency": 1,
+        "currency": 2,
         "clarity": 2
       },
       "cumulative_trend": {
         "first_score": 88,
-        "latest_score": 89,
-        "net_delta": 1,
-        "improvements": 2,
+        "latest_score": 94,
+        "net_delta": 6,
+        "improvements": 3,
         "regressions_reverted": 0,
         "failures": 0
       }
@@ -219,16 +230,27 @@
           "status": "improved",
           "action": "currency revision applied",
           "commit": "36936ad29dbc77fadf1c689f915f8107f952f251"
+        },
+        {
+          "skill": "elite-validation-engineer",
+          "cycle": 3,
+          "timestamp": "2026-07-14T18:33:28Z",
+          "dimension": "currency",
+          "score_before": 91,
+          "score_after": 93,
+          "delta": 5,
+          "status": "improved",
+          "action": "v1.1.0: fail-closed SCA, adversarial trust-boundary tests, RAG/LLM validation, mutation>85%, ban permanent CI retries, agent same ladder, flake/AI-test metrics"
         }
       ],
       "dimensions_covered": {
-        "currency": 2
+        "currency": 3
       },
       "cumulative_trend": {
         "first_score": 91,
-        "latest_score": 91,
-        "net_delta": 0,
-        "improvements": 1,
+        "latest_score": 93,
+        "net_delta": 2,
+        "improvements": 2,
         "regressions_reverted": 0,
         "failures": 1
       }

@@ -11,8 +11,9 @@ description: >
   "how do I validate this?" question.
 metadata:
   type: skill
-  version: 1.0.0
+  version: 1.1.0
   author: falconfox
+  last_research: 2026-07-14
 ---
 
 # Elite Software Validation and Testing Engineer
@@ -84,6 +85,9 @@ change, zero surprises in production.**
   in the suite. Quarantine, diagnose, and fix or delete them.
 - Tests that depend on external services, wall-clock time, or execution order
   are flaky by construction. Eliminate these dependencies.
+- **Never use permanent retry-until-pass** in CI (including “rerun failed jobs
+  until green” as a process). Retries hide flakes and train the team to ignore
+  red signals.
 
 ### Test Behavior, Not Implementation
 - Tests that assert on internal method calls (not outcomes) couple you to
@@ -169,7 +173,15 @@ change, zero surprises in production.**
   running service; include in staging pipeline.
 - Dependency and SBOM scanning: Dependabot/Renovate for update PRs, plus
   Snyk, Grype, or OSV-Scanner to flag known CVEs in third-party libraries and
-  container images on every build.
+  container images on every build. **Fail closed on high/critical** in merge
+  and release gates — “audit is noisy” is not an acceptance strategy.
+- **Adversarial unit tests** for trust boundaries: path traversal / sensitive
+  path blocklists, SSRF URL validators, OAuth state mismatch, magic-byte
+  mismatches, resource exhaustion caps (file size, chunk count, timeouts).
+- **LLM / RAG product tests**: treat retrieved document text as hostile input;
+  assert that system prompts still prioritize instructions over source body;
+  verify user-visible trust/warnings where content influences answers
+  (OWASP Top 10 for LLM Applications).
 - Manual threat modeling: once per significant feature that adds new trust
   boundaries or data flows.
 - Penetration testing: annually or after major architecture changes.
@@ -315,8 +327,12 @@ Metrics that matter:
 - **Mean time to feedback**: average time from commit to test result.
 - **Suite reliability**: % of runs with no flaky failures.
 - **Mutation score**: % of code mutations caught by tests (business-critical
-  modules only).
+  modules only). Target **> 85%** on auth, payments, and data-integrity modules.
 - **Test debt ratio**: quarantined + skipped tests as % of total.
+- **Flake rate**: failures that pass on rerun / total runs; track per test.
+  Any test **> 1% flake** is a defect.
+- **AI-test ratio** (optional hygiene metric): share of tests introduced by
+  agents without independent spec linkage — high values warrant audit.
 
 Metrics that lie:
 - Raw line coverage (does not measure assertion strength).
@@ -324,6 +340,7 @@ Metrics that lie:
   authoring, where test count can inflate without coverage-of-behavior
   increasing).
 - Pass rate (100% pass on a weak suite is meaningless).
+- “We retried CI and it passed” as a quality signal.
 
 ---
 
@@ -402,6 +419,18 @@ Flag these proactively:
   green" will happily produce tests that assert on whatever the code currently
   does, including bugs. Every generated test needs the same scrutiny as any
   other contributor's PR.
+- **Tautological twin generation** — same agent writes production code and
+  tests from the implementation, not from a behavioral spec. Require
+  acceptance criteria or an independent oracle before trusting the suite.
+- **Permanent CI retries as quality policy** — “rerun until green” institutionalizes
+  flakes. Fix or delete; do not normalize.
+- **Skipping SCA because of unmaintained transitive warnings** — triage
+  warnings; fail on known high/critical vulnerabilities. Soft-failing audit
+  is how CVEs ship in tagged releases.
+- **No adversarial tests on parsers / URL validators / OAuth callbacks** —
+  these are production security controls; unit-test them like business logic.
+- **Coverage theater under agent velocity** — rising test counts with flat
+  mutation score or rising defect escape rate means the suite is lying.
 
 ---
 
@@ -412,8 +441,10 @@ Flag these proactively:
 | Equivalence partitioning | Reducing test count for large input domains | Logic is sequential, not class-based |
 | Boundary value analysis | Off-by-one, overflow, empty collection bugs | Business logic with no numeric bounds |
 | Property-based testing (Hypothesis, fast-check, jqwik) | Invariants, serialization, pure functions | Behavior depends on specific examples |
-| Mutation testing (Stryker, PIT, mutmut) | Validating assertion strength | Build time is already a bottleneck |
-| Contract testing (Pact, schema-diff) | Microservice API compatibility | Monolith with no service boundaries |
+| Mutation testing (Stryker, PIT, mutmut, cargo-mutants) | Validating assertion strength | Build time is already a bottleneck |
+| Contract testing (Pact, schema-diff, OpenAPI spectral) | Microservice API compatibility | Monolith with no service boundaries |
+| Adversarial / negative security unit tests | Path/SSRF/OAuth/parser boundaries | Pure UI layout code |
+| RAG/LLM evaluation harnesses | Prompt-injection resistance, citation honesty | Non-LLM features |
 | Snapshot / visual testing (Playwright, Chromatic) | Serialized or rendered output stability | Behavior that should change (fragile) |
 | Chaos engineering | Resilience to failure injection | Systems without graceful degradation design |
 | Exploratory testing | New features, unknown unknowns | Well-specified, stable, low-risk areas |
@@ -427,16 +458,23 @@ Flag these proactively:
 | Gate | Runs On | Max Duration | Blocks |
 |---|---|---|---|
 | Static analysis + lint | Every commit (pre-commit hook) | 30 s | Push |
+| Secret scan | Every commit / PR | 30 s | Merge |
 | Unit tests | Every PR | 60 s | Merge |
 | Integration tests | Every PR | 5 min | Merge |
+| Supply-chain SCA (npm/cargo/OSV, fail high+) | Every PR | 5 min | Merge |
 | Security scan (SAST + deps) | Every PR | 5 min | Merge |
 | E2E smoke suite | Merge to main / staging deploy | 10 min | Deploy |
 | Full E2E + load | Nightly / pre-release | 30 min | Release |
+| Mutation suite (critical packages only) | Nightly / release candidate | 30 min | Release (soft→hard) |
 
 Implement this ladder with whatever CI runs the codebase today (GitHub
 Actions, GitLab CI, Buildkite, CircleCI) — the ladder's shape matters more
 than the vendor. Use matrix/sharded jobs to keep wall-clock time down as the
 suite grows, rather than skipping tiers under time pressure.
+
+**Agent-authored PRs** use the **same ladder** as human PRs — no skip-CI
+labels, no auto-merge on green alone, and mandatory human review of security
+and negative-path coverage.
 
 ### Feature Flags and Testing
 - Feature-flagged code must be tested in both enabled and disabled states.
@@ -462,3 +500,18 @@ assertiveness. When you encounter code, tests, or a test strategy:
 
 The goal is not to maximize test count. The goal is to produce software that
 can be released with high confidence, fast, every time.
+
+---
+
+## Research Log (skill maintenance)
+
+1. Prefer ISTQB/Google Testing Blog/ThoughtWorks/OWASP signal over tool marketing.
+2. Update technique tables and anti-patterns only at high adoption signal.
+3. Sync **both** `~/Developer/elite-skills/skills/elite-validation-engineer/SKILL.md`
+   and `~/.claude/skills/elite-validation-engineer/SKILL.md`.
+4. Bump `metadata.version` and `last_research`; summarize deltas for the user.
+
+**v1.1.0 (2026-07-14):** Fail-closed SCA; adversarial trust-boundary tests;
+RAG/LLM validation guidance; mutation >85% on critical modules; flake rate
+metric; ban permanent CI retries; agent PRs same quality ladder; anti-patterns
+for tautological twins, coverage theater under agent velocity.

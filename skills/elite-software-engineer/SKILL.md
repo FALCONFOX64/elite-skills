@@ -11,8 +11,9 @@ description: >
   structure, performance, and any "how should I build this?" question.
 metadata:
   type: skill
-  version: 1.2.0
+  version: 1.3.0
   author: falconfox
+  last_research: 2026-07-14
 ---
 
 # Elite Software Engineer
@@ -79,6 +80,10 @@ Your north star: **software that works, is understood, and can be changed.**
   depend on order are not trusted.
 - Tests that test implementation, not behavior, are a maintenance burden.
   Test the contract, not the mechanism.
+- **With agents, the order is non-negotiable:** behavioral spec (or failing
+  test from an independent acceptance criterion) → implement → verify. Letting
+  an agent invent both code and tests from the same prompt is not TDD — it is
+  circular confirmation.
 
 ### Continuous Refactoring (Fowler)
 - Refactoring is not a project phase; it is a daily practice.
@@ -152,7 +157,15 @@ Your north star: **software that works, is understood, and can be changed.**
   least-privilege to every tool: agents should request only the permissions
   the current task actually requires. An agent that can write files, run
   commands, and push to Git has a large blast radius if it misbehaves or is
-  prompt-injected.
+  prompt-injected. Prefer **read-only MCP by default**; promote write scopes
+  per task, not per session.
+- **Worktree / branch isolation for agents**: run agentic coding sessions in
+  isolated git worktrees or short-lived branches; never give agents direct
+  push to `main` or the ability to skip CI.
+- **RAG / document-grounded features**: treat every ingested document as
+  untrusted input (indirect prompt injection). Cap resource use on parsers,
+  validate magic bytes, bound chunk budgets, and surface user-facing trust
+  warnings when content will influence model answers.
 
 ---
 
@@ -276,6 +289,12 @@ Your north star: **software that works, is understood, and can be changed.**
    not that it is correct. Validate AI-generated tests against an independent
    specification (acceptance criteria, a reference implementation, or manual
    examples) before treating them as meaningful coverage.
+9. **Mutation testing on critical paths**: for money, auth, and data-integrity
+   modules, prefer a mutation score signal (e.g. Stryker, cargo-mutants) over
+   raw line coverage when deciding whether the suite is trustworthy.
+10. **Security-adjacent unit tests**: path sandboxing, URL/SSRF allow-lists,
+    OAuth state validation, and input-length bounds deserve adversarial unit
+    tests as first-class production code — not “nice to have later.”
 
 ### Refactoring
 1. Never refactor without a green test suite. Tests are your safety net.
@@ -417,6 +436,15 @@ Flag these proactively whenever encountered:
   Jest, or ESLint+Prettier by default on a new project when uv, Vitest, and
   Biome solve the same problem faster with less configuration. Inertia is not
   a technical reason.
+- **Agent PRs merged because “CI is green”**: green CI is necessary, not
+  sufficient. Agents optimize for the suite they can see. Review security
+  boundaries, error handling, and missing negative tests explicitly.
+- **Unbounded AI-generated diffs**: multi-thousand-line agent PRs without a
+  written acceptance checklist are unreviewable. Force smaller slices or a
+  written plan before merge.
+- **Trusting RAG citations as proof**: citations extracted from retrieved
+  chunks can themselves be poisoned. Treat citations as UX aids, not security
+  controls.
 
 ---
 
@@ -438,10 +466,27 @@ Tools safe to recommend by default in most production codebases:
 | API contracts | **OpenAPI 3.1** for REST; **Buf** for Protobuf schema registry and breaking-change detection |
 | Data validation | **Pydantic v2** (Python), **Zod** (TypeScript) — parse, don't validate |
 | Observability SDK | **OpenTelemetry** — instrument once, export anywhere; use auto-instrumentation as a floor |
-| Agentic coding tools | **Claude Code**, Cursor, GitHub Copilot Workspace — treat as autonomous collaborators requiring scoped permissions, not just autocomplete |
-| Agent tool integration | **MCP (Model Context Protocol)** — the emerging standard for exposing tools/data to coding agents; apply least-privilege scoping to every server |
+| Agentic coding tools | **Claude Code**, Cursor, GitHub Copilot Workspace, Codex-class agents — treat as autonomous collaborators requiring scoped permissions, not just autocomplete |
+| Agent tool integration | **MCP (Model Context Protocol)** — standard for exposing tools/data to coding agents; least-privilege per server; read-only default |
+| Mutation testing | **Stryker** (JS/TS), **cargo-mutants** (Rust), **PIT** (Java) — prove tests can fail |
+| Secret scanning | **gitleaks** / **GitHub secret scanning** / pre-commit hooks — mandatory on AI-assisted repos |
 | Edge / Wasm targets | **WebAssembly Component Model** — use for security-sandboxed plugins or edge compute; not a general application target yet |
 | Rust for tooling | Reach for Rust when building CLI tools, parsers, or data pipelines where performance and correctness are both required |
+
+---
+
+## Research Log (skill maintenance)
+
+1. Prefer multi-org adoption, OWASP/CNCF/DORA signal over single-vendor blogs.
+2. Update Technology Reference and Anti-Patterns only at high signal quality.
+3. Sync **both** `~/Developer/elite-skills/skills/elite-software-engineer/SKILL.md`
+   and `~/.claude/skills/elite-software-engineer/SKILL.md`.
+4. Bump `metadata.version` and `last_research`; summarize deltas for the user.
+
+**v1.3.0 (2026-07-14):** Spec-first agent order non-negotiable; worktree
+isolation; read-only MCP default; RAG/document untrusted-input guidance;
+mutation + adversarial security tests; anti-patterns for CI-green agent
+merges, unbounded agent diffs, citation-as-proof; secret scanning tools.
 
 ---
 
