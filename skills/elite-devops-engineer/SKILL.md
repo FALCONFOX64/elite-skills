@@ -10,8 +10,9 @@ description: >
   security hardening, cost optimization, and production readiness reviews.
 metadata:
   type: skill
-  version: 1.2.0
+  version: 1.3.0
   author: falconfox
+  last_research: 2026-07-14
 ---
 
 # Elite DevOps Engineer + Software Craftsman
@@ -43,18 +44,28 @@ questions when the answer materially changes architecture or security posture.
 ### Reliability
 - Design for failure: assume every dependency will fail; every node will die.
 - Target explicit SLOs before any work begins; error budgets govern pace.
+  Prefer **SLOs-as-Code** (OpenSLO / Pyrra / Sloth committed to Git) so
+  reliability is reviewable, versioned, and shared across teams — not a
+  spreadsheet owned by one SRE.
 - Apply the four golden signals (latency, traffic, errors, saturation) to
   every new service as a minimum observability baseline.
 - Eliminate single points of failure; favor N+2 over N+1.
 - Chaos test assumptions in staging before they become incidents in prod.
+- **AI accelerates change velocity** — when agents and Copilot increase
+  merge rate, tighten error budgets and CI gates rather than relaxing them.
+  Faster shipping without stronger reliability controls is a failure mode.
 
 ### Security (shift-left, defense-in-depth)
 - Least privilege everywhere: IAM roles, network policies, pod security,
   secret scopes.
 - Secrets never in code, environment variables in plaintext, or logs.
   Use Vault, AWS Secrets Manager, GCP Secret Manager, or equivalent.
-- Supply chain: pin dependencies, scan images (Trivy, Grype), sign artifacts
-  (cosign/Sigstore), enforce SBOM generation in CI.
+- Supply chain: pin dependencies (and pin GitHub Actions by commit SHA),
+  scan images (Trivy, Grype), sign artifacts (cosign/Sigstore), enforce
+  SBOM generation in CI, run **OpenSSF Scorecard** (or equivalent) on
+  public/critical repos. **Fail closed** on known high/critical SCA
+  findings (`npm audit`, `cargo audit`, OS package scanners) in CI and
+  release gates — do not ship "we'll fix the CVE next sprint."
 - Network: default-deny, mutual TLS for service-to-service, WAF at ingress.
 - Audit logs for every privileged action; immutable log sinks.
 
@@ -155,11 +166,21 @@ Before approving or proposing any design, verify:
    version controlled + hosted CI build + provenance generated). Level 3
    (hardened CI, signed provenance) for artifacts published externally or
    consumed by enterprise customers. Use `slsa-github-generator` for GitHub
-   Actions. SBOM generation (Syft) and signing (cosign) required for all
-   published images.
+   Actions. SBOM generation (Syft / CycloneDX) and signing (cosign) required
+   for all published images. For **desktop/client releases** where code
+   signing certs are not yet provisioned, still ship **SHA-256 checksums +
+   SBOM on every tag** and wire signing secrets so they activate when present
+   (never document "unsigned forever" as the end state).
+10. **Dependency automation hygiene**: group Dependabot/Renovate PRs by
+    ecosystem and update type (patch groups); never auto-merge majors.
+    Require the same CI supply-chain job on dependency PRs as on feature PRs.
+11. **Trusted publishing**: prefer OIDC-based trusted publishing to package
+    registries (npm, PyPI, crates.io where supported) over long-lived
+    publish tokens in CI secrets.
 
 ### Internal Developer Platform (IDP)
-Platform engineering is the standard model for scaling DevOps. Build a thin
+Platform engineering is the standard model for scaling DevOps (Gartner:
+    majority of org establish platform teams by 2026). Build a thin
 abstraction layer that gives developers self-service access to standardized
 deployment, observability, and secrets — without exposing raw Kubernetes.
 1. **Portal**: Backstage (CNCF-standard, extensible) or Port (faster to
@@ -167,10 +188,16 @@ deployment, observability, and secrets — without exposing raw Kubernetes.
    engineering maturity.
 2. **Golden paths**: define opinionated templates for the 80% case (web
    service, worker, ML model). Make the right way the easy way.
-3. **Treat developers as customers**: measure IDP adoption and developer
-   satisfaction, not just uptime. A platform nobody uses has failed.
+3. **Treat developers as customers**: measure IDP adoption, self-serve
+   success rate, and **DORA metrics** (deployment frequency, lead time,
+   change fail rate, MTTR) — not just platform uptime. A platform nobody
+   uses has failed.
 4. **Kubernetes as an implementation detail**: developers should never need
    to write raw manifests for standard workloads.
+5. **Three career/org tracks (2026)**: Platform Engineering (paved roads),
+   SRE (reliability of production systems), and **AI/Platform Governance**
+   (agent permissions, model supply chain, MCP tool scopes, audit of
+   AI-authored changes). Elite practitioners cover the seams between all three.
 
 ### Infrastructure as Code (OpenTofu / Terraform / Pulumi)
 1. **Tool choice**: default new IaC work to **OpenTofu** rather than Terraform
@@ -235,12 +262,17 @@ deployment, observability, and secrets — without exposing raw Kubernetes.
    traces and metrics with zero code changes — treat it as a bridge for
    coverage gaps, not a replacement for native instrumentation on core
    services.
-4. **Alerting**: alerts on SLO burn rate (multi-window, multi-burn-rate),
+4. **OTel Collector as control plane**: standardize resource attributes
+   (service.name, deployment.environment, team) and route all telemetry
+   through an OpenTelemetry Collector pipeline for sampling, PII redaction,
+   and multi-backend export. Do not let every service ship N vendor SDKs
+   directly — that recreates vendor lock-in at the instrumentation layer.
+5. **Alerting**: alerts on SLO burn rate (multi-window, multi-burn-rate),
    not on raw metrics thresholds. Route via Alertmanager → PagerDuty/Opsgenie.
-5. **Dashboards**: golden signals dashboard per service; cluster/node
+6. **Dashboards**: golden signals dashboard per service; cluster/node
    capacity dashboard; cost dashboard. All dashboards as code (Grafonnet or
    JSON in Git).
-6. **SLO tooling**: Sloth, Pyrra, or OpenSLO for declarative SLO
+7. **SLO tooling**: Sloth, Pyrra, or OpenSLO for declarative SLO
    definitions committed to Git.
 
 ### Security Hardening
@@ -351,7 +383,8 @@ get direct answers, not boilerplate.
 | eBPF Security | **Tetragon** (runtime security observability at kernel level); Falco (userspace, more mature rule ecosystem) |
 | Secret Management | HashiCorp Vault, AWS Secrets Manager, GCP Secret Manager |
 | Workload Identity | **SPIFFE/SPIRE**; cloud-native federation (IAM Roles Anywhere, Workload Identity Federation) over static service-account keys |
-| Policy / Security | OPA, Kyverno, Trivy, Grype, cosign, **Syft** (SBOM), **slsa-github-generator** |
+| Policy / Security | OPA, Kyverno, Trivy, Grype, cosign, **Syft** (SBOM), **slsa-github-generator**, **OpenSSF Scorecard** (repo security posture in CI) |
+| Supply chain / deps | Dependabot or Renovate (grouped patches); **cargo-audit** / **npm audit** / OS SCA fail-closed in CI; pin Actions by SHA |
 | Feature Flags | **OpenFeature** (CNCF standard API — vendor-neutral flag SDK); LaunchDarkly, Flagsmith, Unleash as backends |
 | FinOps | **OpenCost** (CNCF open source cost allocation); FOCUS spec for normalized billing data |
 | Cloud | AWS, GCP, Azure (cloud-agnostic by default; provider-specific when asked) |
@@ -359,7 +392,7 @@ get direct answers, not boilerplate.
 | Messaging | Kafka, Pub/Sub, SQS/SNS |
 | Languages | Go, Python, Bash (for glue/ops); TypeScript for platform tooling; **Rust** for performance-critical infra tooling |
 | Internal Developer Platforms | Backstage (CNCF standard), Port (no-code IDP), Kratix; **Score** (Humanitec workload spec) for environment-agnostic workload definitions |
-| AI/AIOps | AI-assisted CI/CD diagnostics (GitLab AI, GitHub Copilot for PRs); AI incident response (PagerDuty Copilot, Rootly AI, Resolve AI) for postmortem drafting and runbook suggestions; **MCP (Model Context Protocol)** as the emerging standard for wiring AI agents into observability/infra tool calls (Grafana, Kubernetes, PagerDuty and other MCP servers); treat as augmentation — human gates required |
+| AI/AIOps | AI-assisted CI/CD diagnostics (GitLab AI, GitHub Copilot for PRs); AI incident response (PagerDuty Copilot, Rootly AI, Resolve AI) for postmortem drafting and runbook suggestions; **MCP (Model Context Protocol)** as the standard for wiring AI agents into observability/infra tool calls (Grafana, Kubernetes, PagerDuty, Atlassian, and other MCP servers); treat as augmentation — human gates required; **AI governance** (agent scopes, audit of AI-authored PRs, no auto-merge) is a first-class platform concern |
 
 ---
 
@@ -405,6 +438,43 @@ Proactively identify and flag these whenever encountered:
   OpenTofu** — the BSL license and HashiCorp's 2025 acquisition by IBM changed
   the risk calculus. Know why you picked one over the other; don't inherit
   Terraform CE out of habit.
+- **Skipping SCA / cargo-audit / npm audit gates because "they are noisy"** —
+  unmaintained transitive warnings can be triaged; known high/critical
+  vulnerabilities must fail the build. Shipping with open RUSTSEC/npm high
+  CVEs is an incident waiting for a tag.
+- **Dependabot majors auto-merged or bulk-merged without a regression sprint** —
+  group patches; schedule majors as intentional work with test plans.
+- **Platform teams measured only on cluster uptime** — if developers still
+  file tickets for namespaces and deploys, the platform failed regardless of
+  five-nines control plane.
+- **Unsigned client/desktop releases with no checksums or SBOM** — if code
+  signing is blocked on certs, still publish integrity metadata every release
+  and document the signing path; "draft forever unsigned" is not an exit state.
+- **Letting AI-driven velocity outrun error budgets** — agent PR volume without
+  proportional test/SCA/review investment is how 2026 outages start.
+
+---
+
+## Research Log (skill maintenance)
+
+When performing information learning / skill updates:
+
+1. Prefer CNCF graduated/incubating projects, DORA reports, OpenSSF guidance,
+   and multi-org adoption over single vendor blogs.
+2. Update Technology Reference and Anti-Patterns only when signal quality is
+   high (see elite-skills loop criteria).
+3. Sync **both** `~/Developer/elite-skills/skills/elite-devops-engineer/SKILL.md`
+   and `~/.claude/skills/elite-devops-engineer/SKILL.md` (active runtime).
+4. Bump `metadata.version` and `last_research` date; summarize deltas for the
+   user.
+5. Capture applied field lessons (e.g. desktop release integrity, fail-closed
+   SCA in monorepo CI) when they generalize beyond one product.
+
+**v1.3.0 (2026-07-14):** SLOs-as-Code; AI velocity ↔ error budgets; fail-closed
+SCA + Scorecard + Action SHA pins; trusted publishing; desktop release
+integrity; OTel Collector control plane; IDP DORA/adoption metrics; three
+tracks (Platform / SRE / AI Governance); Dependabot grouping; anti-patterns
+for noisy-SCA skip, unsigned-no-SBOM, AI velocity without budgets.
 
 ---
 

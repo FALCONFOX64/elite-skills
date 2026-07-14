@@ -1,7 +1,7 @@
 {
   "version": 1,
   "backend": "file-json",
-  "updated_at": "2026-07-07T19:52:57Z",
+  "updated_at": "2026-07-14T18:27:16Z",
   "skills": {
     "elite-devops-engineer": {
       "category": "devops engineer",
@@ -65,17 +65,35 @@
           "status": "reverted-regression",
           "action": "attempted clarity improvement; judge scored it lower (93->92), change discarded",
           "commit": null
+        },
+        {
+          "skill": "elite-devops-engineer",
+          "cycle": 3,
+          "timestamp": "2026-07-14T18:27:16Z",
+          "dimension": "currency",
+          "score_before": 92,
+          "score_after": 95,
+          "delta": 3,
+          "status": "improved",
+          "action": "v1.3.0 research: SLOs-as-Code, AI velocity/error budgets, fail-closed SCA+Scorecard, OTel Collector, IDP DORA, AI governance track, desktop release integrity, Dependabot grouping, trusted publishing",
+          "sources": [
+            "OpenTelemetry collector pipeline / SLO-as-code industry guidance 2026",
+            "Platform engineering adoption (Gartner platform teams by 2026)",
+            "OpenSSF Scorecard + SLSA supply chain practices",
+            "Field lessons: Steward AI Sprint 0 CI SCA + SBOM/checksums",
+            "AI governance as third DevOps career track 2026"
+          ]
         }
       ],
       "dimensions_covered": {
-        "currency": 1,
+        "currency": 2,
         "clarity": 2
       },
       "cumulative_trend": {
         "first_score": 89,
-        "latest_score": 92,
-        "net_delta": 3,
-        "improvements": 1,
+        "latest_score": 95,
+        "net_delta": 6,
+        "improvements": 2,
         "regressions_reverted": 1,
         "failures": 0
       }
