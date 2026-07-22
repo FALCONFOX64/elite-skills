@@ -6,7 +6,8 @@ A living library of elite Claude Code skill definitions for DevOps/SRE, software
 
 | Path | Purpose |
 |---|---|
-| `skills/elite-*/SKILL.md` | The five elite-tier skill personas (DevOps, software engineering, validation, viral tech writing, viral marketing) |
+| `skills/elite-*/SKILL.md` | Elite-tier skill personas (DevOps, software engineering, validation, UX/design, viral writing/marketing, SEO) |
+| `skills/aaahc-offsec-assessor/SKILL.md` | AAAHC-aligned healthcare offensive security assessor (clinic/ASC pen test + HIPAA/AAAHC reporting) |
 | `loop/run_cycle.py` | The agentic loop runner — executes exactly one improvement cycle per invocation |
 | `loop/generate_summary.py` | Aggregates all audit logs into the 7-day summary report |
 | `loop/validate.py` | CI validation gate (schemas + skill frontmatter) that gates PR auto-merge |
